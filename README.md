@@ -1,5 +1,3 @@
-# markdown_desc
-
 ---
 title: "teste5"
 output: html_document
@@ -10,7 +8,13 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
+
+
+
+
+
 ```{r cars, echo=FALSE, message=FALSE, warning=FALSE, results="asis"}
+
 
 
 library(sas7bdat)
@@ -18,27 +22,69 @@ library(dplyr)
 library(ggplot2)
 library(PerformanceAnalytics)
 library(kableExtra)
-library(questionr)
 library(knitr)
-library(descr)
-library(sjPlot)
-library(sjmisc)
-library(sjlabelled)
-library(huxtable)
-library(xtable)
 library(anomalize)
 library(rlang)
+library(xtable)
+library(tidyr)
+library(questionr)
 
 #library(fabriciogiordanelli)
 
-dados <- read.csv("D:/Users/fabricio_giordanelli/Downloads/dados_seguradora.csv", stringsAsFactors = TRUE)
+dados <- read.csv2("D:/Users/fabricio_giordanelli/Downloads/titanic.csv", stringsAsFactors = TRUE)
 
-dados$preco_seguro <- as.numeric(dados$preco_seguro)
-dados$franquia <- as.numeric(dados$franquia)
+dados$tarifa <- as.numeric(dados$tarifa)
+dados$idade <- as.numeric(as.character(dados$idade))
+dados$Sobreviveu <- as.factor(dados$Sobreviveu)
+dados$Classe <- as.factor(dados$Classe)
+dados$conjuge <- as.factor(dados$conjuge)
+dados$filhos <- as.factor(dados$filhos)
 
-
+dados <- dados %>% slice(1:50)
 
 descritiva <- function(dados,soma) {
+  
+  
+  
+  na_count <-sapply(dados, function(y) sum(length(which(is.na(y)))))
+na_not_count <-sapply(dados, function(y) sum(length(which(!is.na(y)))))
+  
+na_count <- data.frame(na_count)
+na_count <- cbind(variavel=rownames(na_count), na_count) 
+rownames(na_count) <- NULL
+  
+na_not_count <- data.frame(na_not_count)
+na_not_count <- cbind(variavel=rownames(na_not_count), na_not_count) 
+rownames(na_not_count) <- NULL
+  
+na_total <-  na_count %>% left_join(na_not_count,by ="variavel")
+  
+na_total <- na_total %>% 
+  mutate(total = rowSums(.[2:3])) %>% 
+                       mutate(perc_NA = 100*round(na_count/total,4),
+                              perc_not_NA = 100*round(na_not_count/total,4))
+ 
+na_total <- gather(na_total, key = "missing", value = "perc", perc_NA, perc_not_NA)
+ 
+na_total$missing <- factor(na_total$missing, levels = c("perc_not_NA","perc_NA"))
+ 
+
+print(
+  ggplot(na_total, aes(x = reorder(variavel, perc), y = perc)) +
+    geom_bar(stat = 'identity', alpha=0.8, aes(fill=missing)) +
+   scale_fill_manual(name = "", 
+                     values = c('steelblue', 'tomato3'),
+                     labels = c("Presente", "Missing")) +
+   geom_text(aes(label = paste(perc,"%")), hjust = 1.5, size = 3)+
+   coord_flip() +
+   labs(title = "Porcentagem de valor vazio por variável", x =
+          'Variável', y = "% de valor vazio") +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"))
+  )
+  
+  
+  
   for (i in 1:ncol(dados)) {
     if (is.factor(dados[,i]) == TRUE | is.character(dados[,i]) == TRUE)  {
       teste <- dados %>%
@@ -58,7 +104,9 @@ descritiva <- function(dados,soma) {
           ggplot2::labs(x = NULL,
                         y = "count & perc",
                         fill = colnames(dados[i]),
-                        title = paste("Quantidade e Percentual de", colnames(dados[i])))
+                        title = paste("Quantidade e Percentual de", colnames(dados[i]))) +
+          theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"))
       )
       
       print(
@@ -155,7 +203,9 @@ descritiva <- function(dados,soma) {
             ggplot2::labs(x = NULL,
                           y = "count & perc",
                           fill = colnames(dados[j]),
-                          title = paste("Quantidade e Percentual de", colnames(dados[i])," por ",colnames(dados[j])))
+                          title = paste("Quantidade e Percentual de", colnames(dados[i])," por ",colnames(dados[j]))) +
+            theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"))
 
 
         )
@@ -212,7 +262,9 @@ reg <- glm(f, family=binomial, data = dados)
                 ggplot2::labs(x = NULL,
                               y = "count & perc",
                               fill = colnames(dados[i]),
-                              title = paste("Soma total de ", colnames(dados[j])))
+                              title = paste("Soma total de ", colnames(dados[j]))) + 
+                theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"))
             )
           }
           else {
@@ -235,7 +287,9 @@ reg <- glm(f, family=binomial, data = dados)
                 ggplot2::labs(x = NULL,
                               y = "count & perc",
                               fill = colnames(dados[i]),
-                              title = paste("Média total de ", colnames(dados[j])))
+                              title = paste("Média total de ", colnames(dados[j]))) + 
+                theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"))
             )
 
 
@@ -251,7 +305,9 @@ reg <- glm(f, family=binomial, data = dados)
               ggplot2::geom_boxplot() +
               ggplot2::labs(
                 title = paste(colnames(dados[i]),colnames(dados[j]),sep = " x ")
-              )
+              ) +
+              theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"))
           )
 
 
@@ -381,7 +437,9 @@ reg <- glm(f, family=binomial, data = dados)
                     ggplot2::labs(x = NULL,
                                   y = "count & perc",
                                   fill = colnames(dados[i]),
-                                  title = paste("Soma total de tarifa"))
+                                  title = paste("Soma total de tarifa")) +
+                    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"))
                 )
 
               }
@@ -402,7 +460,9 @@ reg <- glm(f, family=binomial, data = dados)
                     ggplot2::labs(x = NULL,
                                   y = "count & perc",
                                   fill = colnames(dados[i]),
-                                  title = paste("Média total de tarifa"))
+                                  title = paste("Média total de tarifa")) +
+                    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"))
                 )
 
 
@@ -415,7 +475,9 @@ reg <- glm(f, family=binomial, data = dados)
                   ggplot2::coord_flip() +
                   ggplot2::facet_wrap(as.formula(paste("~", nome2))) +
                   ggplot2::labs(
-                    title = paste(nome1,nome2,nome3,sep = " x "))
+                    title = paste(nome1,nome2,nome3,sep = " x ")) +
+                  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"))
               )
               stop("teste")} ,error = function(e){})
 
@@ -522,7 +584,9 @@ for (i in 1:ncol(dados)-1) {
                               fill = colnames(dados[k]),
                               title = paste("Correlação entre ",colnames(dados[i])," e ",colnames(dados[j]), "pela variável categórica",colnames(dados[k]))) +
                 ggplot2::lims(y = c(-1,1)) +
-                ggplot2::coord_flip()
+                ggplot2::coord_flip() +
+                theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"))
             )
             
             stop("teste")} ,error = function(e){})
